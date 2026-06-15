@@ -18,7 +18,10 @@ class DataStoreSettingsRepository(private val context: Context) : SettingsReposi
     override suspend fun setRule(rule: AppRule) { context.dataStore.edit { p -> p[RULES] = p[RULES].orEmpty().filterNot { it.startsWith("${rule.packageName}|") }.toSet() + encodeRule(rule.copy(delayMs=rule.delayMs.coerceIn(0,10_000))) } }
     override suspend fun removeRule(packageName: String) { context.dataStore.edit { p -> p[RULES] = p[RULES].orEmpty().filterNot { it.startsWith("$packageName|") }.toSet() } }
     private fun encodeRule(r: AppRule)="${r.packageName}|${r.enabled}|${r.delayMs}"
-    private fun decodeRule(s:String):AppRule?=s.split('|').takeIf{it.size==3}?.let{AppRule(it[0],it[1].toBooleanStrictOrNull()?:return null,it[2].toLongOrNull()?:return null)}
+    private fun decodeRule(s:String):AppRule?=s.split('|').takeIf{it.size==3}?.let{
+        val storedDelay = it[2].toLongOrNull() ?: return null
+        AppRule(it[0], it[1].toBooleanStrictOrNull() ?: return null, if (storedDelay == 1_000L) 150L else storedDelay)
+    }
 }
 
 class DataStoreStatsRepository(private val context: Context) : StatsRepository {
