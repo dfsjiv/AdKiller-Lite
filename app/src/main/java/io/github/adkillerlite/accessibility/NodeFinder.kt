@@ -4,6 +4,7 @@ import android.graphics.Rect
 import android.view.accessibility.AccessibilityNodeInfo
 import io.github.adkillerlite.rules.Bounds
 import io.github.adkillerlite.rules.CandidateKey
+import io.github.adkillerlite.rules.ClickTargetPolicy
 import io.github.adkillerlite.rules.GestureSafetyPolicy
 import io.github.adkillerlite.rules.KeywordMatcher
 import java.util.ArrayDeque
@@ -18,6 +19,7 @@ data class NodeCandidate(
 class NodeFinder(
     private val matcher: KeywordMatcher = KeywordMatcher(),
     private val gestureSafety: GestureSafetyPolicy = GestureSafetyPolicy(),
+    private val clickTargetPolicy: ClickTargetPolicy = ClickTargetPolicy(),
 ) {
     fun find(root: AccessibilityNodeInfo, packageName: String): NodeCandidate? {
         val screenBounds = Rect().also(root::getBoundsInScreen).toBounds()
@@ -31,11 +33,11 @@ class NodeFinder(
             val keyword = matcher.match(node.text) ?: matcher.match(node.contentDescription)
             if (keyword != null) {
                 val key = CandidateKey(packageName, node.windowId, keyword)
-                findClickableTarget(node)?.let {
+                val nodeBounds = Rect().also(node::getBoundsInScreen).toBounds()
+                findClickableTarget(node, keyword, nodeBounds, screenBounds)?.let {
                     return NodeCandidate(key, it, null, null)
                 }
 
-                val nodeBounds = Rect().also(node::getBoundsInScreen).toBounds()
                 if (
                     gestureFallback == null &&
                     gestureSafety.canGestureClick(keyword, nodeBounds, screenBounds)
@@ -53,11 +55,20 @@ class NodeFinder(
         return gestureFallback
     }
 
-    private fun findClickableTarget(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+    private fun findClickableTarget(
+        node: AccessibilityNodeInfo,
+        keyword: String,
+        nodeBounds: Bounds,
+        screenBounds: Bounds,
+    ): AccessibilityNodeInfo? {
         var target: AccessibilityNodeInfo? = node
         var hops = 0
         while (target != null && !target.isClickable && hops++ < 8) target = target.parent
-        return target?.takeIf(AccessibilityNodeInfo::isClickable)
+        val clickable = target?.takeIf(AccessibilityNodeInfo::isClickable) ?: return null
+        val targetBounds = Rect().also(clickable::getBoundsInScreen).toBounds()
+        return clickable.takeIf {
+            clickTargetPolicy.canClickTarget(keyword, nodeBounds, targetBounds, screenBounds)
+        }
     }
 
     private fun Rect.toBounds() = Bounds(left, top, right, bottom)

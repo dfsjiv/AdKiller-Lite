@@ -56,7 +56,13 @@ class AdKillerAccessibilityService : AccessibilityService() {
                         ?.takeIf { it.key == candidate.key }
 
                     val success = refreshed?.let { click(it) } == true
-                    if (success) {
+                    delay(300)
+                    val stillVisible = rootInActiveWindow
+                        ?.takeIf { it.packageName?.toString() == packageName }
+                        ?.let { finder.find(it, packageName) }
+                        ?.key == candidate.key
+                    val confirmedClosed = success && !stillVisible
+                    if (confirmedClosed) {
                         safety.recordClick(candidate.key, System.currentTimeMillis())
                     }
                     app.stats.record(
@@ -64,7 +70,7 @@ class AdKillerAccessibilityService : AccessibilityService() {
                             timestampMs = System.currentTimeMillis(),
                             packageName = packageName,
                             keyword = candidate.key.keyword,
-                            success = success,
+                            success = confirmedClosed,
                         ),
                     )
                 } finally {
