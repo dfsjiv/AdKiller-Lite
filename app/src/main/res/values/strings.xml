@@ -1,4 +1,2 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">&#24191;&#21578;&#26432;&#25163; Lite</string>
-</resources>
+﻿<?xml version="1.0" encoding="utf-8"?>
+<resources><string name="app_name">广告杀手 Lite</string><string name="service_description">自动识别并关闭所选应用中的广告关闭按钮</string></resources>
