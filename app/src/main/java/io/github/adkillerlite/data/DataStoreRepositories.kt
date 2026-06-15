@@ -20,7 +20,11 @@ class DataStoreSettingsRepository(private val context: Context) : SettingsReposi
     private fun encodeRule(r: AppRule)="${r.packageName}|${r.enabled}|${r.delayMs}"
     private fun decodeRule(s:String):AppRule?=s.split('|').takeIf{it.size==3}?.let{
         val storedDelay = it[2].toLongOrNull() ?: return null
-        AppRule(it[0], it[1].toBooleanStrictOrNull() ?: return null, if (storedDelay == 1_000L) 150L else storedDelay)
+        AppRule(
+            it[0],
+            it[1].toBooleanStrictOrNull() ?: return null,
+            if (storedDelay == 1_000L || storedDelay == 150L) 0L else storedDelay,
+        )
     }
 }
 
